@@ -6,10 +6,9 @@ import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.Scanner;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-
-
 
 public class RIOLogger {
 
@@ -17,7 +16,6 @@ public class RIOLogger {
         RIOLogger logger = new RIOLogger();
         logger.startListening();
         while (!logger.cleanup);
-        logger.stopListening();
     }
 
     public static byte[] getPacket(DatagramSocket socket, DatagramPacket buf) {
@@ -54,6 +52,7 @@ public class RIOLogger {
 
     Thread listener;
     Thread transferer;
+    Thread exitListener;
 
     volatile DatagramSocket socket_hook = null;
     volatile boolean cleanup = false;
@@ -129,6 +128,18 @@ public class RIOLogger {
                 }
             }
         }, "Riolog-Transfer");
+        exitListener = startDaemonThread(new Runnable() {
+            @Override
+            public void run() {
+                while(!cleanup) {
+                    try(Scanner sc = new Scanner(System.in)) {
+                        if(sc.nextLine().trim().equalsIgnoreCase("exit")) {
+                            stopListening();
+                        }
+                    }
+                }
+            }
+        }, "Exit Listener");
     }
 
     void stopListening() {
