@@ -1,11 +1,14 @@
 package com.myshopify.owcr.riologger;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.NoSuchElementException;
 import java.util.Scanner;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -13,7 +16,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class RIOLogger {
 
     public static void main(String[] args) {
-        RIOLogger logger = new RIOLogger();
+        LoggerLevelChooser.setUpTray();
+        RIOLogger logger = new RIOLogger(System.out);
         logger.startListening();
         while (!logger.cleanup);
     }
@@ -52,15 +56,31 @@ public class RIOLogger {
 
     Thread listener;
     Thread transferer;
-    Thread exitListener;
+    Thread consoleExitListener;
+    Thread trayExitListener;
 
     volatile DatagramSocket socket_hook = null;
     volatile boolean cleanup = false;
-
+    private final PrintStream out;
+    
+    
     /**
      * The constructor.
+     * 
+     * @param out Where the data from the RIOLog should be printed
      */
-    public RIOLogger() {}
+    public RIOLogger(OutputStream out) {
+        this(new PrintStream(out));
+    }
+    
+    /**
+     * The constructor.
+     * 
+     * @param out Where the data from the RIOLog should be printed
+     */
+    public RIOLogger(PrintStream out) {
+        this.out = out;
+    }
 
     public static String drainToString(ArrayList<byte[]> arr) {
         int netlength = 0;
@@ -122,24 +142,36 @@ public class RIOLogger {
                     startDaemonThread(new Runnable() {
                         @Override
                         public void run() {
-                            System.out.print(drainToString(temp));
+                            out.print(drainToString(temp));
                         }
                     }, "Printer");
                 }
             }
         }, "Riolog-Transfer");
-        exitListener = startDaemonThread(new Runnable() {
+        consoleExitListener = startDaemonThread(new Runnable() {
             @Override
             public void run() {
                 while(!cleanup) {
                     try(Scanner sc = new Scanner(System.in)) {
                         if(sc.nextLine().trim().equalsIgnoreCase("exit")) {
                             stopListening();
+                            System.exit(0);
                         }
                     }
                 }
             }
-        }, "Exit Listener");
+        }, "Console Exit Listener");
+        trayExitListener = startDaemonThread(new Runnable() {
+            @Override
+            public void run() {
+                while(!cleanup) {
+                    if(LoggerLevelChooser.shouldExit()) {
+                        stopListening();
+                        System.exit(0);
+                    }
+                }
+            }
+        }, "Tray Exit Listener");
     }
 
     void stopListening() {
