@@ -3,20 +3,28 @@ package com.myshopify.owcr.riologger;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.net.BindException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.SocketException;
 import java.util.ArrayList;
-import java.util.NoSuchElementException;
 import java.util.Scanner;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class RIOLogger {
 
+    public static final String VERSION = "1.0.0-Beta";
+
     public static void main(String[] args) {
+        if (isAppActive())
+            return;
+
         LoggerLevelChooser.setUpTray();
+        ClientLogger.setUpLogging();
         RIOLogger logger = new RIOLogger(System.out);
         logger.startListening();
         while (!logger.cleanup);
@@ -62,8 +70,8 @@ public class RIOLogger {
     volatile DatagramSocket socket_hook = null;
     volatile boolean cleanup = false;
     private final PrintStream out;
-    
-    
+
+
     /**
      * The constructor.
      * 
@@ -72,13 +80,13 @@ public class RIOLogger {
     public RIOLogger(OutputStream out) {
         this(new PrintStream(out));
     }
-    
+
     /**
      * The constructor.
      * 
      * @param out Where the data from the RIOLog should be printed
      */
-    public RIOLogger(PrintStream out) {
+    public RIOLogger(final PrintStream out) {
         this.out = out;
     }
 
@@ -151,9 +159,9 @@ public class RIOLogger {
         consoleExitListener = startDaemonThread(new Runnable() {
             @Override
             public void run() {
-                while(!cleanup) {
-                    try(Scanner sc = new Scanner(System.in)) {
-                        if(sc.nextLine().trim().equalsIgnoreCase("exit")) {
+                try (Scanner sc = new Scanner(System.in)) {
+                    while (!cleanup) {
+                        if (sc.nextLine().trim().equalsIgnoreCase("exit")) {
                             stopListening();
                             System.exit(0);
                         }
@@ -164,8 +172,8 @@ public class RIOLogger {
         trayExitListener = startDaemonThread(new Runnable() {
             @Override
             public void run() {
-                while(!cleanup) {
-                    if(LoggerLevelChooser.shouldExit()) {
+                while (!cleanup) {
+                    if (LoggerLevelChooser.shouldExit()) {
                         stopListening();
                         System.exit(0);
                     }
@@ -182,4 +190,33 @@ public class RIOLogger {
         listener.interrupt();
         transferer.interrupt();
     }
+
+    private static final int PORT = 9999;
+
+    private static boolean isAppActive() {
+        ServerSocket s = null;
+        try {
+            // Bind to localhost adapter with a zero connection queue
+            s = new ServerSocket(PORT, 0, InetAddress.getByAddress(new byte[] {127, 0, 0, 1}));
+        } catch (BindException e) {
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        final ServerSocket finalS = s;
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
+            public void run() {
+                if (finalS != null)
+                    try {
+                        finalS.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+            }
+        });
+
+        return false;
+    }
+
 }
