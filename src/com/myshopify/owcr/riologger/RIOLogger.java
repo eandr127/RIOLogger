@@ -25,7 +25,7 @@ public class RIOLogger {
 
         LoggerLevelChooser.setUpTray();
         ClientLogger.setUpLogging();
-        RIOLogger logger = new RIOLogger(System.out);
+        RIOLogger logger = new RIOLogger(ClientLogger.getPrintStream());
         logger.startListening();
         while (!logger.cleanup);
     }
