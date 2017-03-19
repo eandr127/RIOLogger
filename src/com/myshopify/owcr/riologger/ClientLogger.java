@@ -47,6 +47,7 @@ public class ClientLogger {
 
     private static FileHandler fh;
     private static ConsoleHandler ch;
+    private static ConsoleHandler gh;
 
     /**
      * Configures the logger
@@ -59,16 +60,37 @@ public class ClientLogger {
             logger.setUseParentHandlers(false);
             logger.setLevel(Level.ALL);
             fh = new FileHandler(LOG_FILE.getAbsolutePath(), true);
-            ch = new EConsoleHandler();
+            ch = new EConsoleHandler(System.out);
+            gh = new EConsoleHandler(new PrintStream(System.out) {
+                @Override
+                public void write(final int b) {
+                  LoggerLevelChooser.updateTextPane(String.valueOf((char) b));
+                }
+             
+                @Override
+                public void write(byte[] b, int off, int len) {
+                  LoggerLevelChooser.updateTextPane(new String(b, off, len));
+                }
+             
+                @Override
+                public void write(byte[] b) throws IOException {
+                  write(b, 0, b.length);
+                }
+              });
 
             ch.setFormatter(FORMATTER);
             fh.setFormatter(FORMATTER);
-
+            gh.setFormatter(FORMATTER);
+            
             logger.addHandler(fh);
             logger.addHandler(ch);
+            logger.addHandler(gh);
 
             ch.setLevel(Level.ALL);
             fh.setLevel(LoggerLevelChooser.getLogLevel());
+            gh.setLevel(LoggerLevelChooser.getLogLevel());
+            
+            RobotLoggerLevelSetter.setLevel(LoggerLevelChooser.getLogLevel());
             
             shutdownThread = new Thread() {
                 @Override
@@ -79,6 +101,9 @@ public class ClientLogger {
                     ch.flush();
                     ch.close();
 
+                    gh.flush();
+                    gh.close();
+                    
                     cleanupLogFilename();
                 }
             };
@@ -96,8 +121,10 @@ public class ClientLogger {
     }
 
     public static void setLevel(Level level) {
-        System.out.println(level.getName());
         fh.setLevel(level);
+        gh.setLevel(level);
+        
+        RobotLoggerLevelSetter.setLevel(level);
     }
 
     private static void cleanupLogFilename() {
@@ -114,7 +141,7 @@ public class ClientLogger {
         File datedFile = null;
 
         int i = 1;
-        boolean exists = true;;
+        boolean exists = true;
         while (exists) {
             datedFile = new File("logs/" + S + i + ".log");
 

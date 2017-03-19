@@ -45,16 +45,27 @@ import java.net.URL;
 import java.util.logging.Level;
 
 import javax.swing.ImageIcon;
+import javax.swing.JFrame;
 import javax.swing.JOptionPane;
+import javax.swing.JScrollBar;
+import javax.swing.JScrollPane;
+import javax.swing.JTextPane;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
 
 public class LoggerLevelChooser {
+    
+    private static JTextPane textPane;
+    private static JScrollPane jsp;
 
     private static Level logLevel = Level.OFF;
     private static boolean shouldExit = false;
 
+    private static Runnable exit;
+    
     public static Level getLogLevel() {
         return logLevel;
     }
@@ -101,6 +112,7 @@ public class LoggerLevelChooser {
         // Create a popup menu components
         MenuItem aboutItem = new MenuItem("About");
         Menu displayMenu = new Menu("Log Fineness");
+        MenuItem outputItem = new MenuItem("View Output");
 
         CheckboxMenuItem noneItem = new CheckboxMenuItem("None", true);
         CheckboxMenuItem allItem = new CheckboxMenuItem("All", false);
@@ -115,6 +127,7 @@ public class LoggerLevelChooser {
         popup.add(aboutItem);
         popup.addSeparator();
 
+        popup.add(outputItem);
         popup.add(displayMenu);
         displayMenu.add(noneItem);
         displayMenu.add(allItem);
@@ -128,6 +141,15 @@ public class LoggerLevelChooser {
         trayIcon.setPopupMenu(popup);
         trayIcon.setImageAutoSize(true);
         trayIcon.setToolTip("RIOLogger");
+        
+        JFrame frame = new JFrame();
+        frame.setSize(400, 300);
+        frame.setTitle("RIOLogger - View Output");
+        frame.setIconImage(createImage("/images/icon.png", "tray icon"));
+        textPane = new JTextPane();
+        textPane.setEditable(false);
+        jsp = new JScrollPane(textPane);
+        frame.add(jsp);
 
         try {
             tray.add(trayIcon);
@@ -151,6 +173,12 @@ public class LoggerLevelChooser {
             }
         });
 
+        outputItem.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                frame.setVisible(true);
+            }
+        });
+        
         ItemListener listener = new ItemListener() {
             public void itemStateChanged(ItemEvent e) {
                 CheckboxMenuItem item = (CheckboxMenuItem) e.getSource();
@@ -226,9 +254,16 @@ public class LoggerLevelChooser {
         warningItem.addItemListener(listener);
         errorItem.addItemListener(listener);
 
+        exit = new Runnable() {
+            @Override
+            public void run() {
+                tray.remove(trayIcon);
+                frame.dispose();
+            }
+        };
+        
         exitItem.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                tray.remove(trayIcon);
                 shouldExit = true;
             }
         });
@@ -250,5 +285,27 @@ public class LoggerLevelChooser {
         } else {
             return (new ImageIcon(imageURL, description)).getImage();
         }
+    }
+    
+    public static void updateTextPane(final String text) {
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+              Document doc = textPane.getDocument();
+              try {
+                doc.insertString(doc.getLength(), text, null);
+              } catch (BadLocationException e) {
+                throw new RuntimeException(e);
+              }
+              textPane.setCaretPosition(doc.getLength() - 1);
+              JScrollBar vertical = jsp.getVerticalScrollBar();
+              vertical.setValue( vertical.getMaximum() );
+            }
+          });
+      }
+    
+    public static void exit() {
+        Thread t = new Thread(exit);
+        t.setDaemon(true);
+        t.start();
     }
 }
