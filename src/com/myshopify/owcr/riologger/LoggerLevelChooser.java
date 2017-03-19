@@ -304,8 +304,6 @@ public class LoggerLevelChooser {
       }
     
     public static void exit() {
-        Thread t = new Thread(exit);
-        t.setDaemon(true);
-        t.start();
+        exit.run();
     }
 }

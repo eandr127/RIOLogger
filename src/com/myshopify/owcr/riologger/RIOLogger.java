@@ -164,10 +164,7 @@ public class RIOLogger {
                 try (Scanner sc = new Scanner(System.in)) {
                     while (!cleanup) {
                         if (sc.nextLine().trim().equalsIgnoreCase("exit")) {
-                            stopListening();
-                            RobotLoggerLevelSetter.exit();
-                            LoggerLevelChooser.exit();
-                            System.exit(0);
+                            exit();
                         }
                     }
                 }
@@ -178,10 +175,7 @@ public class RIOLogger {
             public void run() {
                 while (!cleanup) {
                     if (LoggerLevelChooser.shouldExit()) {
-                        stopListening();
-                        RobotLoggerLevelSetter.exit();
-                        LoggerLevelChooser.exit();
-                        System.exit(0);
+                        exit();
                     }
                 }
             }
@@ -225,4 +219,11 @@ public class RIOLogger {
         return false;
     }
 
+    public void exit() {
+        RobotLoggerLevelSetter.exit();
+        stopListening();
+        LoggerLevelChooser.exit();
+        System.exit(0);
+    }
+    
 }

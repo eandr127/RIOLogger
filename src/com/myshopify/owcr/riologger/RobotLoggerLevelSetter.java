@@ -23,6 +23,13 @@ public class RobotLoggerLevelSetter {
     }
     
     public static void exit() {
-        NetworkTable.shutdown();
+        new Thread(new Runnable() {
+
+            @Override
+            public void run() {
+                NetworkTable.shutdown();
+            }
+            
+        }).start();
     }
 }
