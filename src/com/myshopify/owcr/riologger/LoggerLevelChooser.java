@@ -62,16 +62,11 @@ public class LoggerLevelChooser {
     private static JScrollPane jsp;
 
     private static Level logLevel = Level.OFF;
-    private static boolean shouldExit = false;
 
     private static Runnable exit;
     
     public static Level getLogLevel() {
         return logLevel;
-    }
-
-    public static boolean shouldExit() {
-        return shouldExit;
     }
 
     public static void setUpTray() {
@@ -264,7 +259,7 @@ public class LoggerLevelChooser {
         
         exitItem.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                shouldExit = true;
+                RIOLogger.getLogger().cleanup = true;
             }
         });
         

@@ -17,18 +17,21 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class RIOLogger {
 
-    public static final String VERSION = "1.1.0-Beta";
+    public static final String VERSION = "1.1.2-beta";
 
-    public static void main(String[] args) {
+    private static RIOLogger logger;
+    
+    public static void main(String[] args) throws InterruptedException {
         if (isAppActive())
             return;
 
         LoggerLevelChooser.setUpTray();
         RobotLoggerLevelSetter.setUpRobotLoggingLevelSetter();
         ClientLogger.setUpLogging();
-        RIOLogger logger = new RIOLogger(ClientLogger.getPrintStream());
+        logger = new RIOLogger(ClientLogger.getPrintStream());
         logger.startListening();
-        while (!logger.cleanup);
+        while (!logger.cleanup) Thread.sleep(1000);
+        logger.exit();
     }
 
     public static byte[] getPacket(DatagramSocket socket, DatagramPacket buf) {
@@ -63,10 +66,13 @@ public class RIOLogger {
         return t;
     }
 
+    public static RIOLogger getLogger() {
+        return logger;
+    }
+    
     Thread listener;
     Thread transferer;
     Thread consoleExitListener;
-    Thread trayExitListener;
 
     volatile DatagramSocket socket_hook = null;
     volatile boolean cleanup = false;
@@ -164,22 +170,12 @@ public class RIOLogger {
                 try (Scanner sc = new Scanner(System.in)) {
                     while (!cleanup) {
                         if (sc.nextLine().trim().equalsIgnoreCase("exit")) {
-                            exit();
+                            cleanup = true;
                         }
                     }
                 }
             }
         }, "Console Exit Listener");
-        trayExitListener = startDaemonThread(new Runnable() {
-            @Override
-            public void run() {
-                while (!cleanup) {
-                    if (LoggerLevelChooser.shouldExit()) {
-                        exit();
-                    }
-                }
-            }
-        }, "Tray Exit Listener");
     }
 
     void stopListening() {
