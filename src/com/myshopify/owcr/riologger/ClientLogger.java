@@ -52,7 +52,7 @@ public class ClientLogger {
     /**
      * Configures the logger
      */
-    public static void setUpLogging() {
+    public static void setUpLogging(Level level) {
         if (!new File("logs").exists())
             new File("logs").mkdir();
 
@@ -125,6 +125,7 @@ public class ClientLogger {
         gh.setLevel(level);
         
         RobotLoggerLevelSetter.setLevel(level);
+        LoggerLevelChooser.setLevel(level);
     }
 
     private static void cleanupLogFilename() {
@@ -210,6 +211,12 @@ public class ClientLogger {
 
     public static void restart() {
         shutdownThread.run();
-        setUpLogging();
+        
+        // default value is returned if the preference does not exist
+        String defaultValue = new Integer(Level.OFF.intValue()).toString();
+        String propertyValue = LoggerLevelChooser.prefs.get(LoggerLevelChooser.PREF_NAME, defaultValue);
+        Level level = Level.parse(propertyValue);
+        
+        setUpLogging(level);
     }
 }

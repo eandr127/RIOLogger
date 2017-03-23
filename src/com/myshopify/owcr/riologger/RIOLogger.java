@@ -14,10 +14,11 @@ import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.logging.Level;
 
 public class RIOLogger {
 
-    public static final String VERSION = "1.1.2-beta";
+    public static final String VERSION = "1.2";
 
     private static RIOLogger logger;
     
@@ -25,15 +26,20 @@ public class RIOLogger {
         if (isAppActive())
             return;
 
-        LoggerLevelChooser.setUpTray();
-        RobotLoggerLevelSetter.setUpRobotLoggingLevelSetter();
-        ClientLogger.setUpLogging();
+        // default value is returned if the preference does not exist
+        String defaultValue = new Integer(Level.OFF.intValue()).toString();
+        String propertyValue = LoggerLevelChooser.prefs.get(LoggerLevelChooser.PREF_NAME, defaultValue);
+        Level level = Level.parse(propertyValue);
+        
+        LoggerLevelChooser.setUpTray(level);
         logger = new RIOLogger(ClientLogger.getPrintStream());
+        RobotLoggerLevelSetter.setUpRobotLoggingLevelSetter();
+        ClientLogger.setUpLogging(level);
         logger.startListening();
         while (!logger.cleanup) Thread.sleep(1000);
         logger.exit();
     }
-
+    
     public static byte[] getPacket(DatagramSocket socket, DatagramPacket buf) {
         try {
             socket.receive(buf);
