@@ -186,7 +186,14 @@ public class ClientLogger {
 
     private static Level getLogLevel(String outputLine) {
         try {
-            return Level.parse(outputLine.split(" ")[0]);
+            String level = outputLine.split(" ")[0].toUpperCase();
+            
+            // Dashboard has errors not severe
+            if(level.equals("ERROR")) {
+                level = "SEVERE";
+            }
+            
+            return Level.parse(level);
         } catch (IllegalArgumentException e) {
             // Tell formatter to do formatting on its own
             return Level.OFF;
