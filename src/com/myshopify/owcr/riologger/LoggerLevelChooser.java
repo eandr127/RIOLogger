@@ -43,6 +43,7 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.net.URL;
 import java.util.logging.Level;
+import java.util.prefs.Preferences;
 
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
@@ -58,10 +59,16 @@ import javax.swing.text.Document;
 
 public class LoggerLevelChooser {
     
+    // Retrieve the user preference node for the package com.mycompany
+    public static final Preferences prefs = Preferences.userNodeForPackage(RIOLogger.class);
+
+    // Preference key name
+    public static final String PREF_NAME = "LOG_LEVEL";
+    
     private static JTextPane textPane;
     private static JScrollPane jsp;
 
-    private static Level logLevel = Level.OFF;
+    private static Level logLevel;
 
     private static Runnable exit;
     
@@ -69,7 +76,9 @@ public class LoggerLevelChooser {
         return logLevel;
     }
 
-    public static void setUpTray() {
+    public static void setUpTray(Level level) {
+        logLevel = level;
+        
         /* Use an appropriate Look and Feel */
         try {
             UIManager.setLookAndFeel("com.sun.java.swing.plaf.windows.WindowsLookAndFeel");
@@ -248,7 +257,20 @@ public class LoggerLevelChooser {
         infoItem.addItemListener(listener);
         warningItem.addItemListener(listener);
         errorItem.addItemListener(listener);
-
+        
+        if(logLevel == Level.OFF)
+            listener.itemStateChanged(new ItemEvent(noneItem, ItemEvent.ITEM_FIRST + 0, noneItem, ItemEvent.SELECTED));
+        else if(logLevel == Level.ALL)
+            listener.itemStateChanged(new ItemEvent(allItem, ItemEvent.ITEM_FIRST + 1, allItem, ItemEvent.SELECTED));
+        else if(logLevel == Level.CONFIG)
+            listener.itemStateChanged(new ItemEvent(debugItem, ItemEvent.ITEM_FIRST + 2, debugItem, ItemEvent.SELECTED));
+        else if(logLevel == Level.INFO)
+            listener.itemStateChanged(new ItemEvent(infoItem, ItemEvent.ITEM_FIRST + 3, infoItem, ItemEvent.SELECTED));
+        else if(logLevel == Level.WARNING)
+            listener.itemStateChanged(new ItemEvent(warningItem, ItemEvent.ITEM_FIRST + 4, warningItem, ItemEvent.SELECTED));
+        else if(logLevel == Level.SEVERE)
+            listener.itemStateChanged(new ItemEvent(errorItem, ItemEvent.ITEM_FIRST + 5, errorItem, ItemEvent.SELECTED));
+        
         exit = new Runnable() {
             @Override
             public void run() {
@@ -300,5 +322,10 @@ public class LoggerLevelChooser {
     
     public static void exit() {
         exit.run();
+    }
+    
+    public static void setLevel(Level level) {
+        // Set the value of the preference
+        prefs.put(PREF_NAME, new Integer(level.intValue()).toString());
     }
 }
