@@ -1,8 +1,11 @@
 package com.myshopify.owcr.riologger;
 
+import java.io.IOException;
 import java.util.logging.Level;
 
 import edu.wpi.first.wpilibj.networktables.NetworkTable;
+import edu.wpi.first.wpilibj.tables.ITable;
+import edu.wpi.first.wpilibj.tables.ITableListener;
 
 public class RobotLoggerLevelSetter {
 
@@ -18,6 +21,21 @@ public class RobotLoggerLevelSetter {
         NetworkTable.setIPAddress("roboRIO-" + TEAM_NUMBER + "-FRC.local");
         table = NetworkTable.getTable(LOGGER_TABLE);
         table.setDefaultNumber("level", Level.ALL.intValue());
+        
+        table.addTableListener(new ITableListener() {
+            @Override
+            public void valueChanged(ITable source, String key, Object value, boolean isNew) {
+                
+                if(key.equals("Value")) {
+                    try {
+                        RIOLogger.write(source.getRaw(key, new byte[0]));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    source.putRaw("Value", new byte[0]);
+                }
+            }
+        });
         
         new Thread(new Runnable() {
             @Override
@@ -43,8 +61,13 @@ public class RobotLoggerLevelSetter {
     }
     
     public static void setLevel(Level level) {
-        currentLevel = level;
-        table.putNumber("level", level.intValue());
+        try {
+            currentLevel = level;
+            table.putNumber("level", level.intValue());
+        }
+        catch(Exception e) {
+            e.printStackTrace();
+        }
     }
     
     public static void exit() {
