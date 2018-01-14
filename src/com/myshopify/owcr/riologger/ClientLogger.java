@@ -104,7 +104,7 @@ public class ClientLogger {
                     gh.flush();
                     gh.close();
                     
-                    cleanupLogFilename();
+                    cleanupLogFilename("");
                 }
             };
             
@@ -128,7 +128,7 @@ public class ClientLogger {
         LoggerLevelChooser.setLevel(level);
     }
 
-    private static void cleanupLogFilename() {
+    private static void cleanupLogFilename(String name) {
 
         if (LOG_FILE.length() == 0) {
             LOG_FILE.delete();
@@ -144,7 +144,12 @@ public class ClientLogger {
         int i = 1;
         boolean exists = true;
         while (exists) {
-            datedFile = new File("logs/" + S + i + ".log");
+            if(name.isEmpty()) {
+                datedFile = new File("logs/" + S + i + ".log");
+            }
+            else {
+                datedFile = new File("logs/" + name + "-" + i + ".log");
+            }
 
             if (datedFile.exists()) {
                 i++;
@@ -152,7 +157,10 @@ public class ClientLogger {
                 exists = false;
             }
         }
-
+        
+        System.out.println(datedFile.getParentFile().getAbsolutePath());
+        datedFile.getParentFile().mkdirs();
+        
         // Rename file (or directory)
         boolean success = LOG_FILE.renameTo(datedFile);
         if (!success) {
@@ -216,8 +224,17 @@ public class ClientLogger {
 
     }
 
-    public static void restart() {
-        shutdownThread.run();
+    public static void restart(String name) {
+        fh.flush();
+        fh.close();
+
+        ch.flush();
+        ch.close();
+
+        gh.flush();
+        gh.close();
+        
+        cleanupLogFilename(name);
         
         // default value is returned if the preference does not exist
         String defaultValue = new Integer(Level.OFF.intValue()).toString();

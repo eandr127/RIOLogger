@@ -3,13 +3,17 @@ package com.myshopify.owcr.riologger;
 import java.io.IOException;
 import java.util.logging.Level;
 
-import edu.wpi.first.wpilibj.networktables.NetworkTable;
-import edu.wpi.first.wpilibj.tables.ITable;
-import edu.wpi.first.wpilibj.tables.ITableListener;
+import edu.wpi.first.networktables.EntryListenerFlags;
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableEntry;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.NetworkTableValue;
+import edu.wpi.first.networktables.TableEntryListener;
+
 
 public class RobotLoggerLevelSetter {
 
-    public static int TEAM_NUMBER;
+    public static int TEAM_NUMBER = 2706;
     public static String LOGGER_TABLE = "logging-level";
     
     private static NetworkTable table;
@@ -17,25 +21,41 @@ public class RobotLoggerLevelSetter {
     public static volatile Level currentLevel;
     
     public static void setUpRobotLoggingLevelSetter() {
-        NetworkTable.setClientMode();
-        NetworkTable.setIPAddress("roboRIO-" + TEAM_NUMBER + "-FRC.local");
-        table = NetworkTable.getTable(LOGGER_TABLE);
-        table.setDefaultNumber("level", Level.ALL.intValue());
+        NetworkTableInstance.getDefault().startClient();
+        NetworkTableInstance.getDefault().setServer("roboRIO-" + TEAM_NUMBER + "-FRC.local");
         
-        table.addTableListener(new ITableListener() {
+        table = NetworkTableInstance.getDefault().getTable(LOGGER_TABLE);
+        table.getEntry("level").setDefaultValue(Level.ALL.intValue());
+        
+        table.addEntryListener("Value", new TableEntryListener() {
+
             @Override
-            public void valueChanged(ITable source, String key, Object value, boolean isNew) {
-                
-                if(key.equals("Value")) {
-                    try {
-                        RIOLogger.write(source.getRaw(key, new byte[0]));
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    source.putRaw("Value", new byte[0]);
+            public void valueChanged(NetworkTable table, String key, NetworkTableEntry entry,
+                            NetworkTableValue value, int flags) {
+                try {
+                    RIOLogger.write(table.getEntry(key).getRaw(new byte[0]));
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
+                table.getEntry("Value").setRaw(new byte[0]);
+                
             }
-        });
+            
+        }, EntryListenerFlags.kUpdate);
+        
+        table.addEntryListener("save", new TableEntryListener() {
+
+            @Override
+            public void valueChanged(NetworkTable table, String key, NetworkTableEntry entry,
+                            NetworkTableValue value, int flags) {
+                if(table.getEntry("save").getBoolean(false)) {
+                    table.getEntry("save").setBoolean(false);
+                    ClientLogger.restart(table.getEntry("match").getString(""));
+                }
+                
+            }
+            
+        }, EntryListenerFlags.kUpdate);
         
         new Thread(new Runnable() {
             @Override
@@ -43,11 +63,11 @@ public class RobotLoggerLevelSetter {
                 boolean wasConnected = false;
                 
                 while(!RIOLogger.getLogger().cleanup) {
-                    if(table.isConnected() && !wasConnected) {
+                    if(NetworkTableInstance.getDefault().isConnected() && !wasConnected) {
                         setLevel(currentLevel);
                         wasConnected = true;
                     }
-                    else if(!table.isConnected()) {
+                    else if(!NetworkTableInstance.getDefault().isConnected()) {
                         wasConnected = false;
                     }
                     try {
@@ -63,7 +83,7 @@ public class RobotLoggerLevelSetter {
     public static void setLevel(Level level) {
         try {
             currentLevel = level;
-            table.putNumber("level", level.intValue());
+            table.getEntry("level").setNumber(level.intValue());
         }
         catch(Exception e) {
             e.printStackTrace();
@@ -75,7 +95,7 @@ public class RobotLoggerLevelSetter {
 
             @Override
             public void run() {
-                NetworkTable.shutdown();
+                NetworkTableInstance.getDefault().stopClient();
             }
             
         }).start();

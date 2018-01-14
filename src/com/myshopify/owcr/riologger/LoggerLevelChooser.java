@@ -287,7 +287,7 @@ public class LoggerLevelChooser {
         
         restartItem.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                ClientLogger.restart();
+                ClientLogger.restart("");
             }
         });
     }
