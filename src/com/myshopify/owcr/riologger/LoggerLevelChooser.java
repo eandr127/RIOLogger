@@ -294,7 +294,7 @@ public class LoggerLevelChooser {
 
     // Obtain the image URL
     protected static Image createImage(String path, String description) {
-        URL imageURL = TrayIcon.class.getResource(path);
+        URL imageURL = LoggerLevelChooser.class.getResource(path);
 
         if (imageURL == null) {
             System.err.println("Resource not found: " + path);
